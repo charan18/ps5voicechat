@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolateColor, Easing } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, interpolate, interpolateColor, Easing, cancelAnimation } from 'react-native-reanimated';
 import { UI_COLORS, UI_SPACING, UI_RADIUS } from '@/constants';
 import type { BleState } from '@/types';
 
@@ -34,25 +34,19 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ state, devic
   });
 
   useEffect(() => {
-    const config = STATE_CONFIG[state];
-    
-    if (config.pulse) {
-      const animate = () => {
-        pulse.value = withTiming(1, { duration: 1000, easing: Easing.linear }, () => {
-          pulse.value = withTiming(0, { duration: 1000, easing: Easing.linear }, () => {
-            if (STATE_CONFIG[state].pulse) {
-              animate();
-            }
-          });
-        });
-      };
-      animate();
+    if (STATE_CONFIG[state].pulse) {
+      pulse.value = withRepeat(
+        withTiming(1, { duration: 1000, easing: Easing.linear }),
+        -1,
+        true
+      );
     } else {
+      cancelAnimation(pulse);
       pulse.value = 0;
     }
 
     return () => {
-      pulse.value = 0;
+      cancelAnimation(pulse);
     };
   }, [state]);
 
@@ -66,7 +60,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ state, devic
             styles.indicator,
             { backgroundColor: config.color },
             config.pulse && {
-              transform: [{ scale: interpolateColor(pulse.value, [0, 1], [1, 1.2]) }],
+              transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.3]) }],
             },
           ]}
         />

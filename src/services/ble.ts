@@ -90,8 +90,12 @@ class BleService {
 
       const characteristics = await this.manager.characteristicsForDevice(device.id, BLE_CONSTANTS.SERVICE_UUID);
 
-      this.rxCharacteristic = characteristics.find(c => c.uuid === BLE_CONSTANTS.RX_CHARACTERISTIC_UUID) ?? null;
-      this.txCharacteristic = characteristics.find(c => c.uuid === BLE_CONSTANTS.TX_CHARACTERISTIC_UUID) ?? null;
+      this.rxCharacteristic = characteristics.find(c =>
+        c.uuid.toUpperCase() === BLE_CONSTANTS.RX_CHARACTERISTIC_UUID.toUpperCase()
+      ) ?? null;
+      this.txCharacteristic = characteristics.find(c =>
+        c.uuid.toUpperCase() === BLE_CONSTANTS.TX_CHARACTERISTIC_UUID.toUpperCase()
+      ) ?? null;
 
       if (!this.rxCharacteristic) {
         throw new Error('RX characteristic not found');
@@ -173,7 +177,7 @@ class BleService {
 
     try {
       const base64 = base64Encode(text);
-      await this.manager.writeCharacteristicWithResponseForDevice(
+      await this.manager.writeCharacteristicWithoutResponseForDevice(
         this.connectedDevice.id,
         BLE_CONSTANTS.SERVICE_UUID,
         BLE_CONSTANTS.RX_CHARACTERISTIC_UUID,

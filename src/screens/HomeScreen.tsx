@@ -46,7 +46,7 @@ async function requestSpeechPermissions(): Promise<boolean> {
 
 export const HomeScreen: React.FC = () => {
   const { state: bleState, device, error: bleError, setError } = useBleStore();
-  const { lastSentMessage } = useSpeechStore();
+  const { lastSentMessage, messageHistory } = useSpeechStore();
   const isConnected = bleState === 'connected';
   const [permissionsReady, setPermissionsReady] = useState(false);
   const [permissionsError, setPermissionsError] = useState<string | null>(null);
@@ -182,6 +182,17 @@ export const HomeScreen: React.FC = () => {
         </View>
 
         <LastSentMessage message={lastSentMessage} />
+
+        {messageHistory.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.historyTitle}>Recent Messages</Text>
+            {messageHistory.map((msg, i) => (
+              <View key={`${msg}-${i}`} style={styles.historyItem}>
+                <Text style={styles.historyText} numberOfLines={1}>{msg}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -251,5 +262,22 @@ const styles = StyleSheet.create({
     color: UI_COLORS.error,
     textAlign: 'center',
     marginBottom: UI_SPACING.md,
+  },
+  historyTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: UI_COLORS.textSecondary,
+    marginBottom: UI_SPACING.sm,
+  },
+  historyItem: {
+    paddingVertical: UI_SPACING.xs + 2,
+    paddingHorizontal: UI_SPACING.sm,
+    backgroundColor: UI_COLORS.surface,
+    borderRadius: UI_RADIUS.sm,
+    marginBottom: UI_SPACING.xs,
+  },
+  historyText: {
+    fontSize: 14,
+    color: UI_COLORS.text,
   },
 });

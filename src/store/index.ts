@@ -29,9 +29,11 @@ interface SpeechStore {
   state: SpeechState;
   transcript: string;
   lastSentMessage: string;
+  messageHistory: string[];
   setState: (state: SpeechState) => void;
   setTranscript: (text: string) => void;
   setLastSentMessage: (message: string) => void;
+  addToHistory: (message: string) => void;
   reset: () => void;
 }
 
@@ -39,6 +41,7 @@ const initialSpeechState = {
   state: 'idle' as SpeechState,
   transcript: '',
   lastSentMessage: '',
+  messageHistory: [] as string[],
 };
 
 export const useSpeechStore = create<SpeechStore>((set) => ({
@@ -46,5 +49,8 @@ export const useSpeechStore = create<SpeechStore>((set) => ({
   setState: (state) => set({ state }),
   setTranscript: (transcript) => set({ transcript }),
   setLastSentMessage: (lastSentMessage) => set({ lastSentMessage }),
+  addToHistory: (message) => set((s) => ({
+    messageHistory: [message, ...s.messageHistory].slice(0, 10),
+  })),
   reset: () => set(initialSpeechState),
 }));

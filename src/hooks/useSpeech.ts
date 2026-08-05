@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect } from 'react';
 import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 import { useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import { useSpeechStore } from '@/store';
+import { normalizeTranscript } from '@/utils/dictionary';
 
 interface UseSpeechOptions {
   onResult: (text: string) => void;
@@ -9,7 +10,7 @@ interface UseSpeechOptions {
 }
 
 export function useSpeech({ onResult, onError }: UseSpeechOptions) {
-  const { state, transcript, setState, setTranscript, setLastSentMessage } = useSpeechStore();
+  const { state, transcript, setState, setTranscript, setLastSentMessage, addToHistory } = useSpeechStore();
   const isListeningRef = useRef(false);
   const finalTranscriptRef = useRef('');
 
@@ -38,11 +39,13 @@ export function useSpeech({ onResult, onError }: UseSpeechOptions) {
       isListeningRef.current = false;
       setState('idle');
       if (finalTranscriptRef.current.trim()) {
-        onResult(finalTranscriptRef.current.trim());
-        setLastSentMessage(finalTranscriptRef.current.trim());
+        const normalized = normalizeTranscript(finalTranscriptRef.current.trim());
+        onResult(normalized);
+        setLastSentMessage(normalized);
+        addToHistory(normalized);
       }
     }
-  }, [setState, onResult, setLastSentMessage]);
+  }, [setState, onResult, setLastSentMessage, addToHistory]);
 
   useSpeechRecognitionEvent('result', onResultEvent);
   useSpeechRecognitionEvent('error', onErrorEvent);
@@ -63,6 +66,19 @@ export function useSpeech({ onResult, onError }: UseSpeechOptions) {
         lang: 'en-US',
         interimResults: true,
         continuous: false,
+        contextualStrings: [
+          'need heals',
+          'ult ready',
+          'reloading',
+          'push',
+          'fall back',
+          'group up',
+          'behind you',
+          'on my way',
+          'left flank',
+          'right flank',
+          'mid',
+        ],
       });
     } catch (error) {
       onError?.(error instanceof Error ? error.message : 'Failed to start speech recognition');
