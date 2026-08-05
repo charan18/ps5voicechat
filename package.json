@@ -1,0 +1,32 @@
+{
+  "name": "ps5voicechat",
+  "version": "1.0.0",
+  "main": "expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "base-64": "^1.0.0",
+    "expo": "~54.0.0",
+    "expo-speech-recognition": "~2.0.0",
+    "expo-status-bar": "~2.0.0",
+    "lucide-react-native": "^0.453.0",
+    "react": "18.3.1",
+    "react-native": "0.76.5",
+    "react-native-ble-plx": "^3.5.0",
+    "react-native-gesture-handler": "^3.1.0",
+    "react-native-reanimated": "~3.15.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/base-64": "^1.0.2",
+    "@types/react": "~18.3.0",
+    "typescript": "~5.3.0"
+  },
+  "private": true
+}

@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "PS5 Voice Chat",
+    "slug": "ps5voicechat",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#0A0A0A",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.ps5voicechat.app",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "PS5 Voice Chat uses Bluetooth to connect to your PS5 adapter and send voice-to-text messages.",
+        "NSSpeechRecognitionUsageDescription": "PS5 Voice Chat captures speech and converts it to text for in-game chat.",
+        "NSMicrophoneUsageDescription": "PS5 Voice Chat needs microphone access to capture your voice."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0A0A"
+      },
+      "package": "com.ps5voicechat.app",
+      "permissions": [
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "BLUETOOTH_CONNECT",
+        "BLUETOOTH_SCAN",
+        "ACCESS_FINE_LOCATION",
+        "RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "PS5 Voice Chat needs the microphone to capture your voice for in-game chat.",
+          "speechRecognitionPermission": "PS5 Voice Chat converts your voice to text for in-game messaging."
+        }
+      ]
+    ]
+  }
+}
