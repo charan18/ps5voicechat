@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, Alert, Platform, PermissionsAndroid } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, Alert, Platform, PermissionsAndroid, TextInput } from 'react-native';
 import { useBleStore, useSpeechStore } from '@/store';
 import { bleService } from '@/services/ble';
 import { useSpeech } from '@/hooks/useSpeech';
@@ -50,6 +50,9 @@ export const HomeScreen: React.FC = () => {
   const isConnected = bleState === 'connected';
   const [permissionsReady, setPermissionsReady] = useState(false);
   const [permissionsError, setPermissionsError] = useState<string | null>(null);
+  const [typeDelay, setTypeDelay] = useState('50');
+  const [preDelay, setPreDelay] = useState('300');
+  const [configSaving, setConfigSaving] = useState(false);
 
   const { transcript, start, stop, isListening } = useSpeech({
     onResult: async (text) => {
@@ -97,6 +100,33 @@ export const HomeScreen: React.FC = () => {
     setError(null);
     await handleConnect();
   }, [handleConnect, setError]);
+
+  const handleApplyConfig = useCallback(async () => {
+    if (!isConnected) {
+      Alert.alert('Not Connected', 'Connect to the adapter first.');
+      return;
+    }
+    const t = parseInt(typeDelay, 10);
+    const p = parseInt(preDelay, 10);
+    if (isNaN(t) || t < 0 || t > 2000) {
+      Alert.alert('Invalid Value', 'Char delay must be 0-2000 ms.');
+      return;
+    }
+    if (isNaN(p) || p < 0 || p > 10000) {
+      Alert.alert('Invalid Value', 'Pre-delay must be 0-10000 ms.');
+      return;
+    }
+    setConfigSaving(true);
+    try {
+      await bleService.sendText(`#D${t}`);
+      await bleService.sendText(`#P${p}`);
+      Alert.alert('Config Saved', `Char delay: ${t}ms, Pre-delay: ${p}ms`);
+    } catch (error) {
+      Alert.alert('Config Failed', error instanceof Error ? error.message : 'Failed to send config');
+    } finally {
+      setConfigSaving(false);
+    }
+  }, [isConnected, typeDelay, preDelay]);
 
   useEffect(() => {
     const initPermissions = async () => {
@@ -166,6 +196,45 @@ export const HomeScreen: React.FC = () => {
               Disconnect
             </Button>
           )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.historyTitle}>Typing Speed</Text>
+          <View style={styles.configRow}>
+            <View style={styles.configField}>
+              <Text style={styles.configLabel}>Char delay (ms)</Text>
+              <TextInput
+                style={styles.configInput}
+                value={typeDelay}
+                onChangeText={setTypeDelay}
+                keyboardType="number-pad"
+                placeholder="50"
+                placeholderTextColor={UI_COLORS.textMuted}
+              />
+            </View>
+            <View style={styles.configField}>
+              <Text style={styles.configLabel}>Pre-delay (ms)</Text>
+              <TextInput
+                style={styles.configInput}
+                value={preDelay}
+                onChangeText={setPreDelay}
+                keyboardType="number-pad"
+                placeholder="300"
+                placeholderTextColor={UI_COLORS.textMuted}
+              />
+            </View>
+          </View>
+          <Button
+            variant="secondary"
+            onPress={handleApplyConfig}
+            disabled={!isConnected || configSaving}
+            style={styles.configButton}
+          >
+            {configSaving ? 'Saving...' : 'Apply'}
+          </Button>
+          <Text style={styles.configHint}>
+            Char delay: time between keystrokes. Pre-delay: wait before typing starts.
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -279,5 +348,35 @@ const styles = StyleSheet.create({
   historyText: {
     fontSize: 14,
     color: UI_COLORS.text,
+  },
+  configRow: {
+    flexDirection: 'row',
+    gap: UI_SPACING.md,
+    marginBottom: UI_SPACING.md,
+  },
+  configField: {
+    flex: 1,
+  },
+  configLabel: {
+    fontSize: 13,
+    color: UI_COLORS.textSecondary,
+    marginBottom: UI_SPACING.xs,
+  },
+  configInput: {
+    backgroundColor: UI_COLORS.surface,
+    borderRadius: UI_RADIUS.md,
+    borderWidth: 1,
+    borderColor: UI_COLORS.border,
+    color: UI_COLORS.text,
+    fontSize: 16,
+    paddingVertical: UI_SPACING.md,
+    paddingHorizontal: UI_SPACING.md,
+  },
+  configButton: {
+    marginBottom: UI_SPACING.xs,
+  },
+  configHint: {
+    fontSize: 12,
+    color: UI_COLORS.textMuted,
   },
 });
