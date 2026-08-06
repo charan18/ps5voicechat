@@ -175,31 +175,14 @@ class BleService {
       throw new Error('Not connected to device');
     }
 
-    const CHUNK_SIZE = 20;
-
     try {
       const base64 = base64Encode(text);
-
-      if (base64.length <= CHUNK_SIZE) {
-        await this.manager.writeCharacteristicWithoutResponseForDevice(
-          this.connectedDevice.id,
-          BLE_CONSTANTS.SERVICE_UUID,
-          BLE_CONSTANTS.RX_CHARACTERISTIC_UUID,
-          base64
-        );
-        return;
-      }
-
-      for (let i = 0; i < base64.length; i += CHUNK_SIZE) {
-        const chunk = base64.slice(i, i + CHUNK_SIZE);
-        await this.manager.writeCharacteristicWithoutResponseForDevice(
-          this.connectedDevice.id,
-          BLE_CONSTANTS.SERVICE_UUID,
-          BLE_CONSTANTS.RX_CHARACTERISTIC_UUID,
-          chunk
-        );
-        await new Promise(resolve => setTimeout(resolve, 60));
-      }
+      await this.manager.writeCharacteristicWithResponseForDevice(
+        this.connectedDevice.id,
+        BLE_CONSTANTS.SERVICE_UUID,
+        BLE_CONSTANTS.RX_CHARACTERISTIC_UUID,
+        base64
+      );
     } catch (error) {
       throw new Error(`Failed to send text: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
