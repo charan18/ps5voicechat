@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, Alert, Platform, PermissionsAndroid, TextInput } from 'react-native';
-import { useBleStore, useSpeechStore } from '@/store';
+import { useBleStore, useSpeechStore, useConfigStore } from '@/store';
 import { bleService } from '@/services/ble';
 import { useSpeech } from '@/hooks/useSpeech';
 import { ConnectionStatus } from '@/components/ConnectionStatus';
@@ -46,13 +46,23 @@ async function requestSpeechPermissions(): Promise<boolean> {
 
 export const HomeScreen: React.FC = () => {
   const { state: bleState, device, error: bleError, setError } = useBleStore();
-  const { lastSentMessage, messageHistory } = useSpeechStore();
+  const { lastSentMessage, messageHistory, handsFreeActive, setHandsFreeActive } = useSpeechStore();
+  const { typeDelay, preDelay, setTypeDelay, setPreDelay } = useConfigStore();
   const isConnected = bleState === 'connected';
   const [permissionsReady, setPermissionsReady] = useState(false);
   const [permissionsError, setPermissionsError] = useState<string | null>(null);
-  const [typeDelay, setTypeDelay] = useState('50');
-  const [preDelay, setPreDelay] = useState('300');
+  const [typeDelayInput, setTypeDelayInput] = useState(String(typeDelay));
+  const [preDelayInput, setPreDelayInput] = useState(String(preDelay));
+  const [typeDelayFocused, setTypeDelayFocused] = useState(false);
+  const [preDelayFocused, setPreDelayFocused] = useState(false);
   const [configSaving, setConfigSaving] = useState(false);
+
+  useEffect(() => {
+    if (!typeDelayFocused) setTypeDelayInput(String(typeDelay));
+  }, [typeDelay, typeDelayFocused]);
+  useEffect(() => {
+    if (!preDelayFocused) setPreDelayInput(String(preDelay));
+  }, [preDelay, preDelayFocused]);
 
   const { transcript, start, stop, isListening } = useSpeech({
     onResult: async (text) => {
@@ -85,6 +95,7 @@ export const HomeScreen: React.FC = () => {
         return;
       }
       await bleService.connect(devices[0].id);
+      bleService.requestConfig();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Connection failed';
       setError(message);
@@ -96,6 +107,18 @@ export const HomeScreen: React.FC = () => {
     await bleService.disconnect();
   }, []);
 
+  const handleToggleHandsFree = useCallback(() => {
+    setHandsFreeActive(!handsFreeActive);
+  }, [handsFreeActive, setHandsFreeActive]);
+
+  useEffect(() => {
+    if (handsFreeActive) {
+      start(true);
+    } else {
+      stop();
+    }
+  }, [handsFreeActive, start, stop]);
+
   const handleRetry = useCallback(async () => {
     setError(null);
     await handleConnect();
@@ -106,8 +129,8 @@ export const HomeScreen: React.FC = () => {
       Alert.alert('Not Connected', 'Connect to the adapter first.');
       return;
     }
-    const t = parseInt(typeDelay, 10);
-    const p = parseInt(preDelay, 10);
+    const t = parseInt(typeDelayInput, 10);
+    const p = parseInt(preDelayInput, 10);
     if (isNaN(t) || t < 0 || t > 2000) {
       Alert.alert('Invalid Value', 'Char delay must be 0-2000 ms.');
       return;
@@ -120,13 +143,15 @@ export const HomeScreen: React.FC = () => {
     try {
       await bleService.sendText(`#D${t}`);
       await bleService.sendText(`#P${p}`);
+      setTypeDelay(t);
+      setPreDelay(p);
       Alert.alert('Config Saved', `Char delay: ${t}ms, Pre-delay: ${p}ms`);
     } catch (error) {
       Alert.alert('Config Failed', error instanceof Error ? error.message : 'Failed to send config');
     } finally {
       setConfigSaving(false);
     }
-  }, [isConnected, typeDelay, preDelay]);
+  }, [isConnected, typeDelayInput, preDelayInput, setTypeDelay, setPreDelay]);
 
   useEffect(() => {
     const initPermissions = async () => {
@@ -199,14 +224,25 @@ export const HomeScreen: React.FC = () => {
         </View>
 
         <View style={styles.section}>
+          <Button variant="secondary" onPress={handleToggleHandsFree}>
+            {handsFreeActive ? 'Hands-Free Mode: ON' : 'Hands-Free Mode: OFF'}
+          </Button>
+          <Text style={styles.configHint}>
+            When on, the phone listens automatically while the adapter detects the chat box is open, and sends each sentence as a message.
+          </Text>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.historyTitle}>Typing Speed</Text>
           <View style={styles.configRow}>
             <View style={styles.configField}>
               <Text style={styles.configLabel}>Char delay (ms)</Text>
               <TextInput
                 style={styles.configInput}
-                value={typeDelay}
-                onChangeText={setTypeDelay}
+                value={typeDelayInput}
+                onChangeText={setTypeDelayInput}
+                onFocus={() => setTypeDelayFocused(true)}
+                onBlur={() => setTypeDelayFocused(false)}
                 keyboardType="number-pad"
                 placeholder="50"
                 placeholderTextColor={UI_COLORS.textMuted}
@@ -216,8 +252,10 @@ export const HomeScreen: React.FC = () => {
               <Text style={styles.configLabel}>Pre-delay (ms)</Text>
               <TextInput
                 style={styles.configInput}
-                value={preDelay}
-                onChangeText={setPreDelay}
+                value={preDelayInput}
+                onChangeText={setPreDelayInput}
+                onFocus={() => setPreDelayFocused(true)}
+                onBlur={() => setPreDelayFocused(false)}
                 keyboardType="number-pad"
                 placeholder="300"
                 placeholderTextColor={UI_COLORS.textMuted}
@@ -246,7 +284,7 @@ export const HomeScreen: React.FC = () => {
             onStart={start}
             onEnd={stop}
             isListening={isListening}
-            disabled={!isConnected}
+            disabled={!isConnected || handsFreeActive}
           />
         </View>
 

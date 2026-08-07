@@ -30,10 +30,12 @@ interface SpeechStore {
   transcript: string;
   lastSentMessage: string;
   messageHistory: string[];
+  handsFreeActive: boolean;
   setState: (state: SpeechState) => void;
   setTranscript: (text: string) => void;
   setLastSentMessage: (message: string) => void;
   addToHistory: (message: string) => void;
+  setHandsFreeActive: (active: boolean) => void;
   reset: () => void;
 }
 
@@ -42,6 +44,7 @@ const initialSpeechState = {
   transcript: '',
   lastSentMessage: '',
   messageHistory: [] as string[],
+  handsFreeActive: false,
 };
 
 export const useSpeechStore = create<SpeechStore>((set) => ({
@@ -52,5 +55,20 @@ export const useSpeechStore = create<SpeechStore>((set) => ({
   addToHistory: (message) => set((s) => ({
     messageHistory: [message, ...s.messageHistory].slice(0, 10),
   })),
+  setHandsFreeActive: (handsFreeActive) => set({ handsFreeActive }),
   reset: () => set(initialSpeechState),
+}));
+
+interface ConfigStore {
+  typeDelay: number;
+  preDelay: number;
+  setTypeDelay: (value: number) => void;
+  setPreDelay: (value: number) => void;
+}
+
+export const useConfigStore = create<ConfigStore>((set) => ({
+  typeDelay: 50,
+  preDelay: 300,
+  setTypeDelay: (typeDelay) => set({ typeDelay }),
+  setPreDelay: (preDelay) => set({ preDelay }),
 }));

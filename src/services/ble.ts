@@ -1,8 +1,8 @@
 import { BleManager, Device, Characteristic, BleError } from 'react-native-ble-plx';
-import { encode as base64Encode } from 'base-64';
+import { encode as base64Encode, decode as base64Decode } from 'base-64';
 import { BLE_CONSTANTS, BLE_TIMEOUTS, RECONNECT_DELAY, MAX_RECONNECT_ATTEMPTS } from '@/constants';
 import type { BleDevice } from '@/types';
-import { useBleStore } from '@/store';
+import { useBleStore, useConfigStore, useSpeechStore } from '@/store';
 
 type ConnectionCallback = (device: BleDevice | null, error: string | null) => void;
 
@@ -106,9 +106,14 @@ class BleService {
           device.id,
           BLE_CONSTANTS.SERVICE_UUID,
           BLE_CONSTANTS.TX_CHARACTERISTIC_UUID,
-          (error: BleError | null) => {
+          (error: BleError | null, characteristic: Characteristic | null) => {
             if (error) {
               console.warn('BLE notification error:', error.message);
+              return;
+            }
+            if (characteristic?.value) {
+              const data = base64Decode(characteristic.value);
+              this.handleIncomingData(data);
             }
           }
         );
@@ -167,6 +172,60 @@ class BleService {
       await this.connect(this.lastConnectedDeviceId);
     } catch {
       this.isReconnecting = false;
+    }
+  }
+
+  private handleIncomingData(data: string): void {
+    const value = data.trim();
+    if (value === '#LISTEN') {
+      useSpeechStore.getState().setHandsFreeActive(true);
+      console.log('Hands-free: listen requested by adapter');
+      return;
+    }
+    if (value === '#STOP') {
+      useSpeechStore.getState().setHandsFreeActive(false);
+      console.log('Hands-free: stop requested by adapter');
+      return;
+    }
+
+    const configStore = useConfigStore.getState();
+    const typeMatch = data.match(/#D(\d+)/);
+    const preMatch = data.match(/#P(\d+)/);
+    let changed = false;
+
+    if (typeMatch) {
+      const value = parseInt(typeMatch[1], 10);
+      if (!isNaN(value) && value > 0) {
+        configStore.setTypeDelay(value);
+        changed = true;
+      }
+    }
+    if (preMatch) {
+      const value = parseInt(preMatch[1], 10);
+      if (!isNaN(value) && value >= 0) {
+        configStore.setPreDelay(value);
+        changed = true;
+      }
+    }
+    if (changed) {
+      console.log('Config updated from adapter:', data);
+    }
+  }
+
+  async requestConfig(): Promise<void> {
+    if (!this.rxCharacteristic || !this.connectedDevice) {
+      return;
+    }
+    try {
+      const base64 = base64Encode('#G');
+      await this.manager.writeCharacteristicWithResponseForDevice(
+        this.connectedDevice.id,
+        BLE_CONSTANTS.SERVICE_UUID,
+        BLE_CONSTANTS.RX_CHARACTERISTIC_UUID,
+        base64
+      );
+    } catch (error) {
+      console.warn('Failed to request config:', error);
     }
   }
 
